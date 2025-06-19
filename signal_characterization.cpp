@@ -7,6 +7,7 @@
 #include <math.h>
 #include <stdexcept>
 #include <iostream>
+#include <vector>
 
 #define PEAK 1.0
 #define T1_MS 0.5e-3
@@ -20,6 +21,8 @@
 #define DEFAULT 0.0
 #define TEMP 1e+6
 #define S 0.0
+#define CAPACITOR_A 1e-6
+#define CAPACITOR_B 3.3e-6
 
 #define EX_T1 1e-3
 #define EX_T2 10e-3
@@ -28,6 +31,7 @@
 
 void tau2_equation(double &tau2, const double T2, const double alpha, const double A, const double B);
 double f(const double tau, const double T);
+std::vector<double> cascade_filter_params(const double tau1, const double tau2, const double B, const double cb, const double ca);
 
 int main(void)
 {
@@ -51,9 +55,9 @@ int main(void)
     B = DEFAULT;
     tau1 = DEFAULT;
     tau2 = DEFAULT;
-    T1 = T1_US;
-    T2 = T2_US;
-    alpha = DEFAULT_ALPHA;
+    T1 = T1_MS;
+    T2 = T2_MS;
+    alpha = 0.5;
 
     // program-control varaibles
     bool t = false;
@@ -100,6 +104,10 @@ int main(void)
         k++;
     } while (std::pow((beta - sbeta), 2) > TOL and k < MAX_IT);
 
+
+    printf("\nParametros circuito pasabanda en cascada\n");
+    std::vector<double> pr = cascade_filter_params(tau1, tau2, B, CAPACITOR_B, CAPACITOR_A);
+    printf("{ Cb: %.2e,\tRc: %.2f,\tRd: %.2f,\tCa: %.2e,\tRb: %.2f,\tRa: %.2f }\n", pr[0], pr[1], pr[2], pr[3], pr[4], pr[5]);
     return EXIT_SUCCESS;
 }
 
@@ -115,4 +123,16 @@ double f(const double tau, const double T)
 {
     double x = S - (T / tau);
     return std::exp(x) / tau;
+}
+
+std::vector<double> cascade_filter_params(const double tau1, const double tau2, const double B, const double cb, const double ca)
+{
+    std::vector<double> params{cb, .0, .0, ca, .0, .0};
+
+    params[1] = tau2/cb;
+    params[2] = B*params[1];
+    params[4] = tau1/ca;
+    params[5] = (params[2]*(tau1*tau2))/((params[1]*ca*B)*(tau2-tau1));
+
+    return params; 
 }
